@@ -1,6 +1,8 @@
 import paramiko
 import re
 import time
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from io import BytesIO
 
 host1 = '192.168.1.254'
 user = 'flob'
@@ -88,9 +90,9 @@ def interface_inspection (next = False ):
 		f_int["name"] = re.sub(r'_','',int_line)
 		interfaces_brief.append(f_int)
 
-	if f_int['name'] == '--More--' :
-		t = interface_inspection(True)
-		interfaces_brief.extend(t)
+		if f_int['name'] == '--More--' :
+			t = interface_inspection(True)
+			interfaces_brief.extend(t)
 	return [ i for i in interfaces_brief if i['enable'] != 'no set' ]
 
 def shut_down_unuse_interfaces(interfaces):
@@ -173,9 +175,9 @@ def secure_ospf(ospf_id,ospf_area,interfaces,ospf_pass):
 
 	execute_cmd(connection,'end')
 
-interfaces = interface_inspection()
-interfaces = [ el['name'] for el in interfaces ]
-secure_ospf(1,0,interfaces,123456)
+#interfaces = interface_inspection()
+#interfaces = [ el['name'] for el in interfaces ]
+#secure_ospf(1,0,interfaces,123456)
 #ospf_info = {}
 #for interface in interfaces:
 #	check_ospf_status(interface['name'])
@@ -186,5 +188,26 @@ secure_ospf(1,0,interfaces,123456)
 
 #check_ospf_status('g4/0')
 
-def main():
-	pass
+class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'Hello, world!')
+
+    def do_POST(self):
+        content_length = int(self.headers['Content-Length'])
+        body = self.rfile.read(content_length)
+        self.send_response(200)
+        self.end_headers()
+        response = BytesIO()
+        response.write(b'This is POST request. ')
+        response.write(b'Received: ')
+        response.write(body)
+        self.wfile.write(response.getvalue())
+
+
+httpd = HTTPServer(('localhost', 8000), SimpleHTTPRequestHandler)
+print('Serving at 8000')
+httpd.serve_forever()
+	

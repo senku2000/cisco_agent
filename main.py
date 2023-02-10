@@ -1,28 +1,9 @@
 import paramiko
 import re
 import time
+import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from io import BytesIO
-
-host1 = '192.168.1.254'
-user = 'flob'
-secret = '123456'
-port = 22
-
-print("conection to devices....")
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
-ssh.connect(hostname=host1, username=user, password=secret, port=port)
-connection = ssh.invoke_shell()
-connection.recv(65535)
-connection.send('enable\n')
-time.sleep(.5)
-connection.recv(65535)
-
-connection.send('123456\n')
-time.sleep(.5)
-connection.recv(65535)
-print("connection done")
 
 
 def execute_cmd(ctx,cmd):
@@ -40,7 +21,7 @@ def execute_cmd(ctx,cmd):
 
 
 def interface_inspection (next = False ):
-	print("executing commande ...")
+
 	stdout =  execute_cmd(connection,' ') if next else execute_cmd(connection,'sh ip int br')
 	#stdin, stdout, stderr = ssh.exec_command('sh ip int br')
 
@@ -190,24 +171,63 @@ def secure_ospf(ospf_id,ospf_area,interfaces,ospf_pass):
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b'Hello, world!')
+	def do_GET(self):
+		self.send_response(200)
+		self.end_headers()
+		self.wfile.write(b'Hello, world!')
 
-    def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
-        body = self.rfile.read(content_length)
-        self.send_response(200)
-        self.end_headers()
-        response = BytesIO()
-        response.write(b'This is POST request. ')
-        response.write(b'Received: ')
-        response.write(body)
-        self.wfile.write(response.getvalue())
+	def do_POST(self):
+		print(self.path)
+
+		content_length = int(self.headers['Content-Length'])
+		body = self.rfile.read(content_length)
+		payload = json.loads(str(body,'utf-8'))
+		print(payload)
+		host = payload['host']
+		
+		if host and payload['enable_password']:
+			
+			print(f"conection to host {host}....")
+			ssh = paramiko.SSHClient()
+			ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
+			ssh.connect(hostname=host, username=payload['user'], password=payload['secret'], port=22)
+			print(f'connection to {host} done\n')
+
+			print('Entering enable mode...')
+			connection = ssh.invoke_shell()
+			connection.recv(65535)
+			connection.send('enable\n')
+			time.sleep(.5)
+			connection.recv(65535)
+			connection.send(payload['enable_password'])
+			time.sleep(.5)
+			connection.recv(65535)
+			print("Entering enable mode successfull\n")
+		else:
+			self.send_response(400)
+			self.end_headers()
+			self.wfile.write(b'Required argument missing')
+			return
+
+		if self.path == '/inspect-interface' :
+			print('interface inspection')
+			res = interface_inspection()
+			res = str(res)
+			self.send_response(200)
+			self.end_headers()
+			response = BytesIO()
+			response.write(b'{res}')
+		else:
+			self.send_response(200)
+			self.end_headers()
+			response = BytesIO()
+			response.write(b'This is POST request. ')
+			response.write(b'Received: ')
+			response.write(body)
+			self.wfile.write(response.getvalue())
 
 
 httpd = HTTPServer(('localhost', 8000), SimpleHTTPRequestHandler)
 print('Serving at 8000')
 httpd.serve_forever()
-	
+

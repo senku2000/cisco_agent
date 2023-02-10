@@ -10,7 +10,7 @@ ospf_info={}
 
 def execute_cmd(ctx,cmd):
 
-	ctx.send(f'{cmd}\n')
+	ctx.send(f'{cmd}')
 	time.sleep(.5)
 	output = ctx.recv(65535)
 
@@ -24,13 +24,11 @@ def execute_cmd(ctx,cmd):
 
 def interface_inspection (connection,next = False ):
 
-	stdout =  execute_cmd(connection,' ') if next else execute_cmd(connection,'sh ip int br')
-	#stdin, stdout, stderr = ssh.exec_command('sh ip int br')
+	stdout =  execute_cmd(connection,' \n') if next else execute_cmd(connection,'sh ip int br\n')
 
 	ip_int = stdout.split('\n')
-	#print(stdout.split('\n'))
-	#return
 	ip_int = ip_int[2:len(ip_int)]
+
 	interfaces_brief = []
 
 	for int in ip_int:
@@ -81,13 +79,13 @@ def interface_inspection (connection,next = False ):
 def shut_down_unused_interfaces(connection,interfaces):
 	print('shut down unused interfaces ...')
 
-	execute_cmd(connection,'conf t')
+	execute_cmd(connection,'conf t\n')
 	for interface in interfaces:
-		execute_cmd(connection,f'interface {interface}')
-		execute_cmd(connection,'switchport mode access')
-		execute_cmd(connection,'shutdown')
+		execute_cmd(connection,f'interface {interface}\n')
+		execute_cmd(connection,'switchport mode access\n')
+		execute_cmd(connection,'shutdown\n')
 
-	execute_cmd(connection,'end')
+	execute_cmd(connection,'end\n')
 
 #Check bpdu guard security
 
@@ -96,7 +94,7 @@ def bpdu_guard_inspection(connection) :
 	print('checking bpduguard status...')
 	spanning_tree_brief = {}
 
-	output = execute_cmd(connection,'sh spanning-tree summary')
+	output = execute_cmd(connection,'sh spanning-tree summary\n')
 	output = output.split('\n')[2]
 
 	if 'BPDU Guard' in output:
@@ -104,18 +102,18 @@ def bpdu_guard_inspection(connection) :
 			spanning_tree_brief['bpdu_guard'] = 0
 		elif 'enabled' in output:
 			spanning_tree_brief['bpdu_guard'] = 1
-	print('bpduguard status check done.')
-	print(spanning_tree_brief)
+	print('bpduguard status check done.\n')
+	return spanning_tree_brief
 
 
 def enable_bpdu_guard(connection):
 
 	print('Enabling bpduguard...')
 
-	execute_cmd(connection,'conf t')
-	execute_cmd(connection,'spanning-tree portfast bpduguard')
-	execute_cmd(connection,'end')
-	execute_cmd(connection,'write')
+	execute_cmd(connection,'conf t\n')
+	execute_cmd(connection,'spanning-tree portfast bpduguard\n')
+	execute_cmd(connection,'end\n')
+	execute_cmd(connection,'write\n')
 
 	print('Bpduguard enabled.')
 
@@ -125,7 +123,7 @@ def check_ospf(connection,interface):
 	print('Checking ospf status ...\n')
 
 	ospf_info[interface] = {}
-	output = execute_cmd(connection,f'sh ip ospf interface {interface}')
+	output = execute_cmd(connection,f'sh ip ospf interface {interface}\n')
 	output = output.split('\n')
 
 	if 'not enabled' in output[1]:
@@ -147,16 +145,17 @@ def check_ospf(connection,interface):
 
 def secure_ospf(connection,ospf_id,ospf_area,interfaces,ospf_pass):
 
-	execute_cmd(connection,'conf t')
-	execute_cmd(connection,f'router ospf {ospf_id}')
-	execute_cmd(connection,f'area {ospf_area} authentication message-digest')
-	execute_cmd(connection,'exit')
+	execute_cmd(connection,'conf t\n')
+	execute_cmd(connection,f'router ospf {ospf_id}\n')
+	execute_cmd(connection,f'area {ospf_area} authentication message-digest\n')
+	execute_cmd(connection,'exit\n')
 
 	for interface in interfaces:
-		execute_cmd(connection,f'int {interface}')
-		execute_cmd(connection,f'ip ospf message-digest-key 1 md5 {ospf_pass}')
+		execute_cmd(connection,f'int {interface}\n')
+		execute_cmd(connection,f'ip ospf message-digest-key 1 md5 {ospf_pass}\n')
 
-	execute_cmd(connection,'end')
+	execute_cmd(connection,'end\n')
+	execute_cmd(connection,'write\n')
 
 #interfaces = interface_inspection()
 #interfaces = [ el['name'] for el in interfaces ]
@@ -201,7 +200,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 			connection.send('enable\n')
 			time.sleep(.5)
 			connection.recv(65535)
-			connection.send(payload['enable_password'])
+			connection.send(f"{payload['enable_password']}\n")
 			time.sleep(.5)
 			connection.recv(65535)
 			print("Entering enable mode successfully\n")
@@ -288,6 +287,10 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 httpd = HTTPServer(('localhost', 8000), SimpleHTTPRequestHandler)
-print('Serving at 8000')
-httpd.serve_forever()
+
+try:
+	print('Serving at 8000')
+	httpd.serve_forever()
+except KeyboardInterrupt:
+	print('Stop Serving')
 

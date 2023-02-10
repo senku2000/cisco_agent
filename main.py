@@ -5,6 +5,8 @@ import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from io import BytesIO
 
+connection=None 
+ospf_info={}
 
 def execute_cmd(ctx,cmd):
 
@@ -76,7 +78,7 @@ def interface_inspection (next = False ):
 			interfaces_brief.extend(t)
 	return [ i for i in interfaces_brief if i['enable'] != 'no set' ]
 
-def shut_down_unuse_interfaces(interfaces):
+def shut_down_unused_interfaces(interfaces):
 	print('shut down unused interfaces ...')
 
 	execute_cmd(connection,'conf t')
@@ -119,7 +121,7 @@ def enable_bpdu_guard():
 
 
 
-def check_ospf_status(interface):
+def check_ospf(interface):
 	print('Checking ospf status ...\n')
 
 	ospf_info[interface] = {}
@@ -184,9 +186,9 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 		payload = json.loads(str(body,'utf-8'))
 		print(payload)
 		host = payload['host']
-		
+
 		if host and payload['enable_password']:
-			
+
 			print(f"conection to host {host}....")
 			ssh = paramiko.SSHClient()
 			ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
@@ -202,21 +204,79 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 			connection.send(payload['enable_password'])
 			time.sleep(.5)
 			connection.recv(65535)
-			print("Entering enable mode successfull\n")
-		else:
-			self.send_response(400)
-			self.end_headers()
-			self.wfile.write(b'Required argument missing')
-			return
+			print("Entering enable mode successfully\n")
+		#else:
+		#	self.send_response(400)
+		#	self.end_headers()
+		#	self.wfile.write(b'Required argument missing')
+		#	return
 
 		if self.path == '/inspect-interface' :
-			print('interface inspection')
+			print('interface inspection...')
 			res = interface_inspection()
 			res = str(res)
 			self.send_response(200)
 			self.end_headers()
 			response = BytesIO()
-			response.write(b'{res}')
+			response.write(str.encode(res))
+			self.wfile.write(response.getvalue())
+			print('interface inpection done.')
+
+		elif self.path == '/shutdown-unused-interfaces' :
+			print('shutdonw unsed interfaces ...')
+			res = shut_down_unused_interfaces(payload['interfaces'])
+			res = str(res)
+			self.send_response(200)
+			self.end_headers()
+			response = BytesIO()
+			response.write(str.encode(res))
+			self.wfile.write(response.getvalue())
+			print('shutdown unused interfaces done.')
+
+		elif self.path == '/check-bpdu-guard' :
+			print('checking bpdu guard ...')
+			res = bpdu_guard_inspection()
+			res = str(res)
+			self.send_response(200)
+			self.end_headers()
+			response = BytesIO()
+			response.write(str.encode(res))
+			self.wfile.write(response.getvalue())
+			print('check for bpdu guard done.')
+
+		elif self.path == '/enable-bpdu-guard' :
+			print('enabling bpdu guard ...')
+			res = enable_bpdu_guard()
+			res = str(res)
+			self.send_response(200)
+			self.end_headers()
+			response = BytesIO()
+			response.write(str.encode(res))
+			self.wfile.write(response.getvalue())
+			print('enabling bpdu guard done.')
+
+		elif self.path == '/check-ospf':
+			print('checking ospf ...')
+			for interface in payload['interfaces']:
+				check_ospf(interface)
+			res = str(ospf_info)
+			self.send_response(200)
+			self.end_headers()
+			response = BytesIO()
+			response.write(str.encode(res))
+			self.wfile.write(response.getvalue())
+			print('ospf check done.')
+
+		elif self.path == '/secure-ospf':
+			print('start to setup ospf cypher ...')
+			secure_ospf(payload['ospf_id'],payload['ospf_area'],payload['interfaces'],payload['ospf_pass'])
+			self.send_response(200)
+			self.end_headers()
+			response = BytesIO()
+			response.write(b'done')
+			self.wfile.write(response.getvalue())
+			print('ospf cypher done.')
+
 		else:
 			self.send_response(200)
 			self.end_headers()

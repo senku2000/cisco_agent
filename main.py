@@ -5,7 +5,7 @@ import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from io import BytesIO
 
-connection=None 
+
 ospf_info={}
 
 def execute_cmd(ctx,cmd):

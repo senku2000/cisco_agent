@@ -22,7 +22,7 @@ def execute_cmd(ctx,cmd):
 	return output
 
 
-def interface_inspection (next = False ):
+def interface_inspection (connection,next = False ):
 
 	stdout =  execute_cmd(connection,' ') if next else execute_cmd(connection,'sh ip int br')
 	#stdin, stdout, stderr = ssh.exec_command('sh ip int br')
@@ -74,11 +74,11 @@ def interface_inspection (next = False ):
 		interfaces_brief.append(f_int)
 
 		if f_int['name'] == '--More--' :
-			t = interface_inspection(True)
+			t = interface_inspection(connection,True)
 			interfaces_brief.extend(t)
 	return [ i for i in interfaces_brief if i['enable'] != 'no set' ]
 
-def shut_down_unused_interfaces(interfaces):
+def shut_down_unused_interfaces(connection,interfaces):
 	print('shut down unused interfaces ...')
 
 	execute_cmd(connection,'conf t')
@@ -91,12 +91,12 @@ def shut_down_unused_interfaces(interfaces):
 
 #Check bpdu guard security
 
-def bpdu_guard_inspection() :
+def bpdu_guard_inspection(connection) :
 
 	print('checking bpduguard status...')
 	spanning_tree_brief = {}
 
-	output = execution_cmd('sh spanning-tree summary')
+	output = execute_cmd(connection,'sh spanning-tree summary')
 	output = output.split('\n')[2]
 
 	if 'BPDU Guard' in output:
@@ -108,7 +108,7 @@ def bpdu_guard_inspection() :
 	print(spanning_tree_brief)
 
 
-def enable_bpdu_guard():
+def enable_bpdu_guard(connection):
 
 	print('Enabling bpduguard...')
 
@@ -121,7 +121,7 @@ def enable_bpdu_guard():
 
 
 
-def check_ospf(interface):
+def check_ospf(connection,interface):
 	print('Checking ospf status ...\n')
 
 	ospf_info[interface] = {}
@@ -145,7 +145,7 @@ def check_ospf(interface):
 				print(f'key is configured {interface}')
 				print(ospf_info[interface]['authentication']['key_is_set'])
 
-def secure_ospf(ospf_id,ospf_area,interfaces,ospf_pass):
+def secure_ospf(connection,ospf_id,ospf_area,interfaces,ospf_pass):
 
 	execute_cmd(connection,'conf t')
 	execute_cmd(connection,f'router ospf {ospf_id}')
@@ -189,7 +189,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
 		if host and payload['enable_password']:
 
-			print(f"conection to host {host}....")
+			print(f"connection to host {host}....")
 			ssh = paramiko.SSHClient()
 			ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
 			ssh.connect(hostname=host, username=payload['user'], password=payload['secret'], port=22)
@@ -213,18 +213,18 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
 		if self.path == '/inspect-interface' :
 			print('interface inspection...')
-			res = interface_inspection()
+			res = interface_inspection(connection=connection)
 			res = str(res)
 			self.send_response(200)
 			self.end_headers()
 			response = BytesIO()
 			response.write(str.encode(res))
 			self.wfile.write(response.getvalue())
-			print('interface inpection done.')
+			print('interface inspection done.')
 
 		elif self.path == '/shutdown-unused-interfaces' :
-			print('shutdonw unsed interfaces ...')
-			res = shut_down_unused_interfaces(payload['interfaces'])
+			print('shutdown unused interfaces ...')
+			res = shut_down_unused_interfaces(connection,payload['interfaces'])
 			res = str(res)
 			self.send_response(200)
 			self.end_headers()
@@ -235,7 +235,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
 		elif self.path == '/check-bpdu-guard' :
 			print('checking bpdu guard ...')
-			res = bpdu_guard_inspection()
+			res = bpdu_guard_inspection(connection)
 			res = str(res)
 			self.send_response(200)
 			self.end_headers()
@@ -246,7 +246,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
 		elif self.path == '/enable-bpdu-guard' :
 			print('enabling bpdu guard ...')
-			res = enable_bpdu_guard()
+			res = enable_bpdu_guard(connection)
 			res = str(res)
 			self.send_response(200)
 			self.end_headers()
@@ -258,7 +258,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 		elif self.path == '/check-ospf':
 			print('checking ospf ...')
 			for interface in payload['interfaces']:
-				check_ospf(interface)
+				check_ospf(connection,interface)
 			res = str(ospf_info)
 			self.send_response(200)
 			self.end_headers()
@@ -269,7 +269,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
 		elif self.path == '/secure-ospf':
 			print('start to setup ospf cypher ...')
-			secure_ospf(payload['ospf_id'],payload['ospf_area'],payload['interfaces'],payload['ospf_pass'])
+			secure_ospf(connection,payload['ospf_id'],payload['ospf_area'],payload['interfaces'],payload['ospf_pass'])
 			self.send_response(200)
 			self.end_headers()
 			response = BytesIO()

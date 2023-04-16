@@ -22,6 +22,14 @@ def execute_cmd(ctx,cmd):
 	return output
 
 
+"""
+	*****************************
+	*						    *
+	*   Interfaces Inspection   *
+	*						    *
+	*****************************
+"""
+
 def interface_inspection (connection,next = False ):
 
 	stdout =  execute_cmd(connection,' \n') if next else execute_cmd(connection,'sh ip int br\n')

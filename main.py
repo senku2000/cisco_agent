@@ -25,11 +25,9 @@ def execute_cmd(ctx,cmd):
 def interface_inspection (connection,next = False ):
 
 	stdout =  execute_cmd(connection,' ') if next else execute_cmd(connection,'sh ip int br')
-	#stdin, stdout, stderr = ssh.exec_command('sh ip int br')
 
 	ip_int = stdout.split('\n')
-	#print(stdout.split('\n'))
-	#return
+
 	ip_int = ip_int[2:len(ip_int)]
 	interfaces_brief = []
 
@@ -89,7 +87,14 @@ def shut_down_unused_interfaces(connection,interfaces):
 
 	execute_cmd(connection,'end')
 
-#Check bpdu guard security
+
+"""
+	*****************************
+	*						    *
+	* BPDU GUARD Security Check *
+	*						    *
+	*****************************
+"""
 
 def bpdu_guard_inspection(connection) :
 
@@ -119,6 +124,24 @@ def enable_bpdu_guard(connection):
 
 	print('Bpduguard enabled.')
 
+
+"""
+	*****************************
+	*						    *
+	* MAC Number By Switch Port *
+	*						    *
+	*****************************
+"""
+
+# comming soon 
+
+"""
+	***********************
+	*					  *
+	* OSPF Security Check *
+	*			          *
+	***********************
+"""
 
 
 def check_ospf(connection,interface):
@@ -158,18 +181,6 @@ def secure_ospf(connection,ospf_id,ospf_area,interfaces,ospf_pass):
 
 	execute_cmd(connection,'end')
 
-#interfaces = interface_inspection()
-#interfaces = [ el['name'] for el in interfaces ]
-#secure_ospf(1,0,interfaces,123456)
-#ospf_info = {}
-#for interface in interfaces:
-#	check_ospf_status(interface['name'])
-#print(ospf_info)
-
-#enable_bpdu_guard()
-#bpdu_guard_inspection()
-
-#check_ospf_status('g4/0')
 
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 

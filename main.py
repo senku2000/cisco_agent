@@ -205,14 +205,14 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 		body = self.rfile.read(content_length)
 		payload = json.loads(str(body,'utf-8'))
 		print(payload)
-		host = payload['host']
+		host = payload['ip']
 
 		if host and payload['enable_password']:
 
 			print(f"connection to host {host}....")
 			ssh = paramiko.SSHClient()
 			ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
-			ssh.connect(hostname=host, username=payload['user'], password=payload['secret'], port=22)
+			ssh.connect(hostname=host, username=payload['ssh_username'], password=payload['ssh_password'], port=22)
 			print(f'connection to {host} done\n')
 
 			print('Entering enable mode...')
@@ -225,11 +225,11 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 			time.sleep(.5)
 			connection.recv(65535)
 			print("Entering enable mode successfully\n")
-		#else:
-		#	self.send_response(400)
-		#	self.end_headers()
-		#	self.wfile.write(b'Required argument missing')
-		#	return
+		else:
+			self.send_response(400)
+			self.end_headers()
+			self.wfile.write(b'Required argument missing')
+			return
 
 		if self.path == '/inspect-interface' :
 			print('interface inspection...')

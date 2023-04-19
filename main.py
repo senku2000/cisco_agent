@@ -110,8 +110,9 @@ def bpdu_guard_inspection(connection) :
 	spanning_tree_brief = {}
 
 	output = execute_cmd(connection,'sh spanning-tree summary\n')
+	time.sleep(1)
 	output = output.split('\n')[2]
-
+	print(output)
 	if 'BPDU Guard' in output:
 		if 'disabled' in output:
 			spanning_tree_brief['bpdu_guard'] = 0

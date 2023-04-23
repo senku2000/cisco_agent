@@ -169,6 +169,14 @@ def check_ospf(connection,interface):
 
 		for line in output:
 
+			if 'Area' in line:
+				ospf_info[interface]['area'] =  int(line.split('Area')[1])
+
+			if 'Process ID' in line: 
+				process = line.split(',')[0]
+				process_id = process.split('ID')[1]
+				ospf_info[interface]['id'] = int(process_id)
+
 			if 'authentication enabled' in line:
 				ospf_info[interface]['authentication']['enable'] = 1
 
